@@ -1,16 +1,133 @@
-import React from "react";
+import React, { useState } from "react";
 import "./App.css";
 
+const RAZORPAY_LINK = "https://rzp.io/rzp/GffxzWO";
+
 const perks = [
-  { icon: "🎧", title: "DJ Booth", text: "EDM & house music with sundowner poolside energy." },
-  { icon: "🏊", title: "Pool Access", text: "Jump in, chill out, and enjoy Thane’s first pool party." },
-  { icon: "🍹", title: "Free Mocktails", text: "Refreshing mocktails served through the evening." },
-  { icon: "☀️", title: "Sunscreen", text: "We’ve got sunscreen for everyone before the pool session." },
-  { icon: "🏓", title: "Pickleball", text: "Two courts available for quick games and challenges." },
-  { icon: "🧊", title: "Ice Bath", text: "A cool recovery zone for a fresh post-swim reset." },
+  {
+    icon: "🎧",
+    title: "DJ Booth",
+    text: "EDM & house music with sundowner poolside energy.",
+  },
+  {
+    icon: "🏊",
+    title: "Pool Access",
+    text: "Swimming pool access for the ultimate summer vibe.",
+  },
+  {
+    icon: "🍹",
+    title: "Free Mocktails",
+    text: "Refreshing mocktails included for all registered guests.",
+  },
+  {
+    icon: "☀️",
+    title: "Sunscreen",
+    text: "Sunscreen arranged so everyone stays pool-ready.",
+  },
+  {
+    icon: "🏓",
+    title: "Pickleball",
+    text: "Two pickleball courts for fun games and challenges.",
+  },
+  {
+    icon: "🧊",
+    title: "Ice Bath",
+    text: "Recovery zone with ice bath experience.",
+  },
 ];
 
 export default function App() {
+  const [form, setForm] = useState({
+    name: "",
+    age: "",
+    gender: "",
+    phone: "",
+    email: "",
+    instagram: "",
+    packageType: "",
+    agreeTerms: false,
+    fitForPool: false,
+  });
+
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+
+    setForm({
+      ...form,
+      [name]: type === "checkbox" ? checked : value,
+    });
+
+    setError("");
+  };
+
+  const validateForm = () => {
+    if (
+      !form.name ||
+      !form.age ||
+      !form.gender ||
+      !form.phone ||
+      !form.email ||
+      !form.instagram ||
+      !form.packageType
+    ) {
+      setError("Please fill all required fields.");
+      return false;
+    }
+
+    if (Number(form.age) < 16) {
+      setError("Age must be 16+ to register for this event.");
+      return false;
+    }
+
+    if (form.phone.replace(/\D/g, "").length < 10) {
+      setError("Please enter a valid contact number.");
+      return false;
+    }
+
+    if (!form.email.includes("@")) {
+      setError("Please enter a valid email address.");
+      return false;
+    }
+
+    if (!form.agreeTerms || !form.fitForPool) {
+      setError("Please accept the mandatory declarations.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const saveUserDetails = () => {
+    const ticketUser = {
+      ...form,
+      event: "Thane Pool Party",
+      date: "10 May 2026",
+      time: "5:00 PM - 8:30 PM",
+      venue: "Nitrro Wellness & Fitness Hub, Thane East",
+      status: "payment_pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem("poolPartyUser", JSON.stringify(ticketUser));
+
+    // Fresh booking ID for every new registration attempt
+    localStorage.removeItem("poolPartyTicketId");
+    localStorage.removeItem("poolPartyBookingId");
+  };
+
+  const handlePayment = (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    saveUserDetails();
+
+    // Razorpay Payment Page should redirect to /success after successful payment
+    window.location.href = RAZORPAY_LINK;
+  };
+
   return (
     <div className="app">
       <div className="liquid-bg"></div>
@@ -25,7 +142,7 @@ export default function App() {
           </h2>
 
           <div className="liquid-search">
-            <span>Search pool, DJ, games...</span>
+            <span>Pool • DJ • Pickleball • Mocktails</span>
             <div className="divider"></div>
             <b>⌕</b>
           </div>
@@ -35,7 +152,9 @@ export default function App() {
 
         <div className="hero-inner">
           <div className="hero-content glass">
-            <p className="tag">10 MAY • 5:00 PM - 8:30 PM • NITRRO THANE EAST</p>
+            <p className="tag">
+              10 MAY • 5:00 PM - 8:30 PM • NITRRO THANE EAST
+            </p>
 
             <h1>
               POOL PARTY
@@ -44,36 +163,210 @@ export default function App() {
             </h1>
 
             <p className="subtitle">
-              Dive into a premium sundowner with DJ, pool games, mocktails,
-              pickleball, ice bath recovery, snacks and full summer energy.
+              Dive into a premium sundowner with EDM and house music, pool
+              games, free mocktails, sunscreen, snacks, pickleball courts, ice
+              bath recovery and complete summer energy.
             </p>
+
+            <div className="hero-info">
+              <div>
+                <strong>Venue</strong>
+                <span>Nitrro Wellness & Fitness Hub</span>
+              </div>
+
+              <div>
+                <strong>Time</strong>
+                <span>5 PM - 8:30 PM</span>
+              </div>
+
+              <div>
+                <strong>Music</strong>
+                <span>EDM & House</span>
+              </div>
+            </div>
 
             <div className="hero-actions">
               <a href="#register">
-                <button>Register Now</button>
+                <button type="button">Register Now</button>
               </a>
-              <span>Limited entries only</span>
+              <span>Limited curated entries only</span>
             </div>
           </div>
 
-          <form className="form-box glass" id="register">
-            <h3>REGISTER NOW</h3>
-            <p>Book your spot for Thane’s first pool party.</p>
+          <form className="form-box glass" id="register" onSubmit={handlePayment}>
+            <div className="form-badge">ENTRY REGISTRATION</div>
 
-            <input placeholder="Full Name" />
-            <input placeholder="Phone Number" />
-            <input placeholder="Email Address" />
-            <input placeholder="Instagram Handle" />
+            <h3>Register Now</h3>
 
-            <select defaultValue="">
-              <option value="" disabled>
-                Are you 18+?
-              </option>
-              <option>Yes</option>
-              <option>No</option>
+            <p>
+              Fill your details, accept the safety declaration, and continue to
+              secure payment.
+            </p>
+
+            {error && <div className="error">{error}</div>}
+
+            <input
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Full Name *"
+            />
+
+            <input
+              name="age"
+              value={form.age}
+              onChange={handleChange}
+              placeholder="Age *"
+              type="number"
+            />
+
+            <select name="gender" value={form.gender} onChange={handleChange}>
+              <option value="">Gender *</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+              <option value="Prefer not to say">Prefer not to say</option>
             </select>
 
-            <button type="button">Submit Registration</button>
+            <input
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              placeholder="Contact Number *"
+              type="tel"
+            />
+
+            <input
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Email Address *"
+              type="email"
+            />
+
+            <input
+              name="instagram"
+              value={form.instagram}
+              onChange={handleChange}
+              placeholder="Instagram Handle *"
+            />
+
+            <select
+              name="packageType"
+              value={form.packageType}
+              onChange={handleChange}
+            >
+              <option value="">Registering For *</option>
+              <option value="Pool Party">Pool Party</option>
+              <option value="Pool Party + Ice Bath">
+                Pool Party + Ice Bath
+              </option>
+            </select>
+
+            <div className="terms-box">
+              <h4>Terms & Conditions</h4>
+
+              <ul>
+                <li>
+                  Entry is allowed only with confirmed registration. No spot
+                  entries.
+                </li>
+                <li>
+                  This is a curated event. Organizers reserve the right to
+                  approve or deny entry.
+                </li>
+                <li>Age 16+ only.</li>
+                <li>
+                  Pool access is at your own risk. Participants should be
+                  comfortable in water.
+                </li>
+                <li>
+                  No running, pushing, or unsafe behavior in or around the pool.
+                </li>
+                <li>
+                  No entry into the pool if you have skin infections, allergies,
+                  open wounds, or communicable conditions.
+                </li>
+                <li>
+                  Proper swimwear or quick-dry athleisure is mandatory for pool
+                  use.
+                </li>
+                <li>
+                  Allowed: swimwear, nylon, polyester, spandex, dry-fit,
+                  non-cotton athleisure.
+                </li>
+                <li>No food or beverages allowed in or around the pool area.</li>
+                <li>
+                  Strictly no alcohol, smoking, or illegal substances inside the
+                  premises.
+                </li>
+                <li>
+                  Any misconduct, nuisance, or harassment will result in removal
+                  without refund.
+                </li>
+                <li>
+                  Participants must follow all instructions from organizers and
+                  venue staff.
+                </li>
+                <li>
+                  Any damage to property, pool area, or pickleball equipment
+                  will be charged.
+                </li>
+                <li>
+                  Photos and videos will be captured. By attending, you consent
+                  to promotional use without compensation.
+                </li>
+                <li>
+                  Participation is entirely at your own risk. Organizers and
+                  venue are not responsible for injury, loss, theft, or health
+                  issues.
+                </li>
+                <li>
+                  Organizers may modify, pause, or cancel the event due to
+                  safety, weather, or unforeseen issues.
+                </li>
+                <li>
+                  All ticket purchases are non-refundable. No refunds for
+                  cancellation, no-show, or late arrival.
+                </li>
+              </ul>
+            </div>
+
+            <div className="checkbox-group">
+              <label>
+                <input
+                  type="checkbox"
+                  name="agreeTerms"
+                  checked={form.agreeTerms}
+                  onChange={handleChange}
+                />
+                <span>
+                  I have read and agree to all terms and conditions. I
+                  understand the risks involved and agree to follow organizer and
+                  venue rules.
+                </span>
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  name="fitForPool"
+                  checked={form.fitForPool}
+                  onChange={handleChange}
+                />
+                <span>
+                  I confirm I am physically fit and have no medical conditions
+                  restricting pool activity.
+                </span>
+              </label>
+            </div>
+
+            <button type="submit">Proceed to Pay</button>
+
+            <small>
+              After successful payment, your Booking ID entry pass will be
+              generated and sent to your email.
+            </small>
           </form>
         </div>
       </section>
@@ -84,7 +377,8 @@ export default function App() {
         </h2>
 
         <p className="section-subtitle">
-          Everything planned to make your Sunday evening feel like a mini vacation.
+          Everything planned to make your Sunday evening feel like a mini
+          vacation.
         </p>
 
         <div className="perk-grid">
@@ -114,20 +408,21 @@ export default function App() {
           </h2>
 
           <p>
-            Thane is hosting its first ever premium sundowner pool party.
-            Expect clean pool access, EDM and house music, free mocktails,
-            sunscreen, snacks, pool games, pickleball courts and an ice bath zone.
+            Thane is hosting its first ever premium sundowner pool party. Expect
+            clean pool access, EDM and house music, free mocktails, sunscreen,
+            snacks, pool games, pickleball courts and an ice bath zone.
           </p>
 
           <ul>
             <li>Venue: Nitrro Wellness & Fitness Hub, Thane East</li>
-            <li>Date: 10th May</li>
+            <li>Date: 10th May 2026</li>
             <li>Time: 5:00 PM to 8:30 PM</li>
             <li>Music: EDM & House</li>
+            <li>Includes: Pool access, mocktails, snacks and games</li>
           </ul>
 
           <a href="#register">
-            <button>Reserve Your Spot</button>
+            <button type="button">Reserve Your Spot</button>
           </a>
         </div>
       </section>
