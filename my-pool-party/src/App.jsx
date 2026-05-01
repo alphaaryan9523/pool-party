@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import "./App.css";
 
-const RAZORPAY_LINK = "https://rzp.io/rzp/GffxzWO";
+const POOL_PARTY_LINK = "https://rzp.io/rzp/ojAr6Qh";
+
+const GOOGLE_MAPS_LINK =
+  "https://www.google.com/maps/search/?api=1&query=Nitrro%20Gym%20Swimming%20Pool%2C%20Kanhaiyya%20Nagar%2C%20Thane%20East%2C%20Thane%2C%20Maharashtra%20400603";
+
+const MAP_EMBED_LINK =
+  "https://maps.google.com/maps?q=Nitrro%20Gym%20Swimming%20Pool%2C%20Kanhaiyya%20Nagar%2C%20Thane%20East%2C%20Thane%2C%20Maharashtra%20400603&t=k&z=17&ie=UTF8&iwloc=&output=embed";
 
 const perks = [
   {
@@ -31,8 +37,8 @@ const perks = [
   },
   {
     icon: "🧊",
-    title: "Ice Bath",
-    text: "Recovery zone with ice bath experience.",
+    title: "Ice Bath Add-on",
+    text: "Optional ₹500 ice bath experience. Registration link will be sent on WhatsApp.",
   },
 ];
 
@@ -44,7 +50,8 @@ export default function App() {
     phone: "",
     email: "",
     instagram: "",
-    packageType: "",
+    packageType: "Pool Party",
+    iceBathOptIn: false,
     agreeTerms: false,
     fitForPool: false,
   });
@@ -69,8 +76,7 @@ export default function App() {
       !form.gender ||
       !form.phone ||
       !form.email ||
-      !form.instagram ||
-      !form.packageType
+      !form.instagram
     ) {
       setError("Please fill all required fields.");
       return false;
@@ -102,17 +108,19 @@ export default function App() {
   const saveUserDetails = () => {
     const ticketUser = {
       ...form,
-      event: "Thane Pool Party",
+      amount: "₹500",
+      event: "Rukna Mana Hai Pool Party",
       date: "10 May 2026",
       time: "5:00 PM - 8:30 PM",
-      venue: "Nitrro Wellness & Fitness Hub, Thane East",
+      venue:
+        "Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East, Thane, Maharashtra 400603",
+      locationLink: GOOGLE_MAPS_LINK,
       status: "payment_pending",
       createdAt: new Date().toISOString(),
     };
 
     localStorage.setItem("poolPartyUser", JSON.stringify(ticketUser));
 
-    // Fresh booking ID for every new registration attempt
     localStorage.removeItem("poolPartyTicketId");
     localStorage.removeItem("poolPartyBookingId");
   };
@@ -124,8 +132,12 @@ export default function App() {
 
     saveUserDetails();
 
-    // Razorpay Payment Page should redirect to /success after successful payment
-    window.location.href = RAZORPAY_LINK;
+    if (POOL_PARTY_LINK.includes("PASTE_") || POOL_PARTY_LINK.trim() === "") {
+      setError("Payment link is not added yet. Please add Razorpay link.");
+      return;
+    }
+
+    window.location.href = POOL_PARTY_LINK;
   };
 
   return (
@@ -136,42 +148,36 @@ export default function App() {
       <div className="jelly-orb"></div>
 
       <section className="hero" id="home">
-        <nav className="navbar glass">
+        <nav className="navbar glass navbar-no-search">
           <h2>
-            RHM <span>SUNDOWNER</span>
+            Rukna Mana Hai <span>Pool Party</span>
           </h2>
 
-          <div className="liquid-search">
-            <span>Pool • DJ • Pickleball • Mocktails</span>
-            <div className="divider"></div>
-            <b>⌕</b>
-          </div>
-
-          <p>THANE’S FIRST EVER POOL PARTY</p>
+          <p>THANE’S ULTIMATE SUNDOWNER POOL PARTY</p>
         </nav>
 
         <div className="hero-inner">
           <div className="hero-content glass">
-            <p className="tag">
-              10 MAY • 5:00 PM - 8:30 PM • NITRRO THANE EAST
-            </p>
+            <p className="tag">10 MAY • 5:00 PM - 8:30 PM • THANE EAST</p>
 
             <h1>
-              POOL PARTY
+              THANE’S ULTIMATE
               <br />
-              UNDER THE SUNSET
+              SUNDOWNER
+              <br />
+              POOL PARTY
             </h1>
 
             <p className="subtitle">
               Dive into a premium sundowner with EDM and house music, pool
-              games, free mocktails, sunscreen, snacks, pickleball courts, ice
-              bath recovery and complete summer energy.
+              games, free mocktails, sunscreen, snacks, pickleball courts and
+              complete summer energy.
             </p>
 
             <div className="hero-info">
               <div>
-                <strong>Venue</strong>
-                <span>Nitrro Wellness & Fitness Hub</span>
+                <strong>Pool Party</strong>
+                <span>₹500</span>
               </div>
 
               <div>
@@ -180,9 +186,32 @@ export default function App() {
               </div>
 
               <div>
-                <strong>Music</strong>
-                <span>EDM & House</span>
+                <strong>Venue</strong>
+                <span>Nitrro Gym Swimming Pool</span>
               </div>
+            </div>
+
+            <div className="venue-box">
+              <strong>Location</strong>
+
+              <p>
+                Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East, Thane,
+                Maharashtra 400603
+              </p>
+
+              <div className="satellite-map-card">
+                <iframe
+                  title="Nitrro Gym Swimming Pool Satellite Map"
+                  src={MAP_EMBED_LINK}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                ></iframe>
+              </div>
+
+              <a href={GOOGLE_MAPS_LINK} target="_blank" rel="noreferrer">
+                <button type="button">Open Google Maps</button>
+              </a>
             </div>
 
             <div className="hero-actions">
@@ -256,12 +285,24 @@ export default function App() {
               value={form.packageType}
               onChange={handleChange}
             >
-              <option value="">Registering For *</option>
-              <option value="Pool Party">Pool Party</option>
-              <option value="Pool Party + Ice Bath">
-                Pool Party + Ice Bath
-              </option>
+              <option value="Pool Party">Pool Party - ₹500</option>
             </select>
+
+            <div className="icebath-option">
+              <label>
+                <input
+                  type="checkbox"
+                  name="iceBathOptIn"
+                  checked={form.iceBathOptIn}
+                  onChange={handleChange}
+                />
+                <span>
+                  Would you like to opt for the ice bath experience?
+                  <b> ₹500 add-on.</b> Registration link will be sent on
+                  WhatsApp.
+                </span>
+              </label>
+            </div>
 
             <div className="terms-box">
               <h4>Terms & Conditions</h4>
@@ -361,11 +402,11 @@ export default function App() {
               </label>
             </div>
 
-            <button type="submit">Proceed to Pay</button>
+            <button type="submit">Pay ₹500</button>
 
             <small>
-              After successful payment, your Booking ID entry pass will be
-              generated and sent to your email.
+              After successful payment, your Booking ID and QR entry pass will
+              be generated and sent to your email.
             </small>
           </form>
         </div>
@@ -408,27 +449,40 @@ export default function App() {
           </h2>
 
           <p>
-            Thane is hosting its first ever premium sundowner pool party. Expect
-            clean pool access, EDM and house music, free mocktails, sunscreen,
-            snacks, pool games, pickleball courts and an ice bath zone.
+            Thane’s ultimate sundowner pool party brings together clean pool
+            access, EDM and house music, free mocktails, sunscreen, snacks, pool
+            games, pickleball courts and an optional ice bath experience.
           </p>
 
           <ul>
-            <li>Venue: Nitrro Wellness & Fitness Hub, Thane East</li>
+            <li>
+              Venue: Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East
+            </li>
             <li>Date: 10th May 2026</li>
             <li>Time: 5:00 PM to 8:30 PM</li>
             <li>Music: EDM & House</li>
             <li>Includes: Pool access, mocktails, snacks and games</li>
+            <li>Optional add-on: Ice bath experience at ₹500</li>
           </ul>
 
-          <a href="#register">
-            <button type="button">Reserve Your Spot</button>
+          <div className="about-map-card">
+            <iframe
+              title="Nitrro Gym Swimming Pool Satellite Map About"
+              src={MAP_EMBED_LINK}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            ></iframe>
+          </div>
+
+          <a href={GOOGLE_MAPS_LINK} target="_blank" rel="noreferrer">
+            <button type="button">View Location</button>
           </a>
         </div>
       </section>
 
       <footer>
-        <p>RHM Sundowner × Nitrro Thane East</p>
+        <p>Rukna Mana Hai Pool Party × Nitrro Thane East</p>
       </footer>
     </div>
   );
