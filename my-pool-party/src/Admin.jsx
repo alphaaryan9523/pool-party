@@ -1,485 +1,282 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
+import { supabase } from "./supabaseClient";
 import "./App.css";
 
-const POOL_PARTY_LINK = "PASTE_500_RUPEE_RAZORPAY_LINK_HERE";
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "admin123";
 
-const GOOGLE_MAPS_LINK =
-  "https://www.google.com/maps/search/?api=1&query=Nitrro%20Gym%20Swimming%20Pool%2C%20Kanhaiyya%20Nagar%2C%20Thane%20East%2C%20Thane%2C%20Maharashtra%20400603";
+export default function Admin() {
+  const [password, setPassword] = useState("");
+  const [isAdmin, setIsAdmin] = useState(
+    localStorage.getItem("poolPartyAdmin") === "true"
+  );
 
-const MAP_EMBED_LINK =
-  "https://maps.google.com/maps?q=Nitrro%20Gym%20Swimming%20Pool%2C%20Kanhaiyya%20Nagar%2C%20Thane%20East%2C%20Thane%2C%20Maharashtra%20400603&t=k&z=17&ie=UTF8&iwloc=&output=embed";
-
-const perks = [
-  {
-    icon: "🎧",
-    title: "DJ Booth",
-    text: "EDM & house music with sundowner poolside energy.",
-  },
-  {
-    icon: "🏊",
-    title: "Pool Access",
-    text: "Swimming pool access for the ultimate summer vibe.",
-  },
-  {
-    icon: "🍹",
-    title: "Free Mocktails",
-    text: "Refreshing mocktails included for all registered guests.",
-  },
-  {
-    icon: "☀️",
-    title: "Sunscreen",
-    text: "Sunscreen arranged so everyone stays pool-ready.",
-  },
-  {
-    icon: "🏓",
-    title: "Pickleball",
-    text: "Two pickleball courts for fun games and challenges.",
-  },
-  {
-    icon: "🧊",
-    title: "Ice Bath Add-on",
-    text: "Optional ₹500 ice bath experience. Registration link will be sent on WhatsApp.",
-  },
-];
-
-export default function App() {
-  const [form, setForm] = useState({
-    name: "",
-    age: "",
-    gender: "",
-    phone: "",
-    email: "",
-    instagram: "",
-    packageType: "Pool Party",
-    iceBathOptIn: false,
-    agreeTerms: false,
-    fitForPool: false,
-  });
-
+  const [search, setSearch] = useState("");
+  const [ticket, setTicket] = useState(null);
   const [error, setError] = useState("");
+  const [scannerActive, setScannerActive] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    setForm({
-      ...form,
-      [name]: type === "checkbox" ? checked : value,
-    });
-
-    setError("");
+  const loginAdmin = () => {
+    if (password === ADMIN_PASSWORD) {
+      localStorage.setItem("poolPartyAdmin", "true");
+      setIsAdmin(true);
+      setError("");
+    } else {
+      setError("Wrong admin password.");
+    }
   };
 
-  const validateForm = () => {
-    if (
-      !form.name ||
-      !form.age ||
-      !form.gender ||
-      !form.phone ||
-      !form.email ||
-      !form.instagram
-    ) {
-      setError("Please fill all required fields.");
-      return false;
-    }
-
-    if (Number(form.age) < 16) {
-      setError("Age must be 16+ to register for this event.");
-      return false;
-    }
-
-    if (form.phone.replace(/\D/g, "").length < 10) {
-      setError("Please enter a valid contact number.");
-      return false;
-    }
-
-    if (!form.email.includes("@")) {
-      setError("Please enter a valid email address.");
-      return false;
-    }
-
-    if (!form.agreeTerms || !form.fitForPool) {
-      setError("Please accept the mandatory declarations.");
-      return false;
-    }
-
-    return true;
+  const logoutAdmin = () => {
+    localStorage.removeItem("poolPartyAdmin");
+    setIsAdmin(false);
+    setPassword("");
   };
 
-  const saveUserDetails = () => {
-    const ticketUser = {
-      ...form,
-      amount: "₹500",
-      event: "Rukna Mana Hai Pool Party",
-      date: "10 May 2026",
-      time: "5:00 PM - 8:30 PM",
-      venue:
-        "Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East, Thane, Maharashtra 400603",
-      locationLink: GOOGLE_MAPS_LINK,
-      status: "payment_pending",
-      createdAt: new Date().toISOString(),
+  const searchTicket = async (value = search) => {
+    try {
+      setLoading(true);
+      setError("");
+      setTicket(null);
+
+      const query = value.trim();
+
+      if (!query) {
+        setError("Enter Booking ID, phone, name, or Instagram.");
+        setLoading(false);
+        return;
+      }
+
+      const { data, error: searchError } = await supabase
+        .from("tickets")
+        .select("*")
+        .or(
+          `booking_id.ilike.%${query}%,phone.ilike.%${query}%,name.ilike.%${query}%,instagram.ilike.%${query}%`
+        )
+        .limit(1)
+        .maybeSingle();
+
+      if (searchError) throw searchError;
+
+      if (!data) {
+        setError("No booking found.");
+        setLoading(false);
+        return;
+      }
+
+      setTicket(data);
+      setLoading(false);
+    } catch (err) {
+      console.error("ADMIN SEARCH ERROR:", err);
+      setError(err?.message || "Search failed.");
+      setLoading(false);
+    }
+  };
+
+  const markEntryUsed = async () => {
+    try {
+      if (!ticket) return;
+
+      if (ticket.entry_status === "used") {
+        setError("This booking is already marked as used.");
+        return;
+      }
+
+      const { data, error: updateError } = await supabase
+        .from("tickets")
+        .update({ entry_status: "used" })
+        .eq("id", ticket.id)
+        .select("*")
+        .single();
+
+      if (updateError) throw updateError;
+
+      setTicket(data);
+      setError("");
+    } catch (err) {
+      console.error("ENTRY UPDATE ERROR:", err);
+      setError(err?.message || "Could not mark entry as used.");
+    }
+  };
+
+  useEffect(() => {
+    if (!scannerActive || !isAdmin) return;
+
+    const scanner = new Html5QrcodeScanner(
+      "qr-reader",
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      },
+      false
+    );
+
+    scanner.render(
+      async (decodedText) => {
+        try {
+          let bookingId = decodedText;
+
+          try {
+            const parsed = JSON.parse(decodedText);
+            bookingId = parsed.booking_id || parsed.bookingId || decodedText;
+          } catch {
+            bookingId = decodedText;
+          }
+
+          setSearch(bookingId);
+          setScannerActive(false);
+
+          await scanner.clear();
+          await searchTicket(bookingId);
+        } catch (err) {
+          console.error(err);
+          setError("Could not read QR code.");
+        }
+      },
+      () => {}
+    );
+
+    return () => {
+      scanner.clear().catch(() => {});
     };
+  }, [scannerActive, isAdmin]);
 
-    localStorage.setItem("poolPartyUser", JSON.stringify(ticketUser));
+  if (!isAdmin) {
+    return (
+      <div className="admin-page">
+        <div className="admin-card glass">
+          <div className="success-badge">ADMIN LOGIN</div>
+          <h1>Entry Dashboard</h1>
+          <p className="success-subtitle">Enter admin password to continue.</p>
 
-    localStorage.removeItem("poolPartyTicketId");
-    localStorage.removeItem("poolPartyBookingId");
-  };
+          <div className="admin-search">
+            <input
+              type="password"
+              value={password}
+              placeholder="Admin password"
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") loginAdmin();
+              }}
+            />
+            <button onClick={loginAdmin}>Login</button>
+          </div>
 
-  const handlePayment = (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    saveUserDetails();
-
-    if (POOL_PARTY_LINK.includes("PASTE_") || POOL_PARTY_LINK.trim() === "") {
-      setError("Payment link is not added yet. Please add Razorpay link.");
-      return;
-    }
-
-    window.location.href = POOL_PARTY_LINK;
-  };
+          {error && <div className="admin-error">{error}</div>}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="app">
-      <div className="liquid-bg"></div>
-      <div className="liquid-blob blob-one"></div>
-      <div className="liquid-blob blob-two"></div>
-      <div className="jelly-orb"></div>
-
-      <section className="hero" id="home">
-        <nav className="navbar glass navbar-no-search">
-          <h2>
-            Rukna Mana Hai <span>Pool Party</span>
-          </h2>
-
-          <p>THANE’S ULTIMATE SUNDOWNER POOL PARTY</p>
-        </nav>
-
-        <div className="hero-inner">
-          <div className="hero-content glass">
-            <p className="tag">10 MAY • 5:00 PM - 8:30 PM • THANE EAST</p>
-
-            <h1>
-              THANE’S ULTIMATE
-              <br />
-              SUNDOWNER POOL PARTY
-            </h1>
-
-            <p className="subtitle">
-              Dive into a premium sundowner with EDM and house music, pool
-              games, free mocktails, sunscreen, snacks, pickleball courts and
-              complete summer energy.
-            </p>
-
-            <div className="hero-info">
-              <div>
-                <strong>Pool Party</strong>
-                <span>₹500</span>
-              </div>
-
-              <div>
-                <strong>Time</strong>
-                <span>5 PM - 8:30 PM</span>
-              </div>
-
-              <div>
-                <strong>Venue</strong>
-                <span>Nitrro Gym Swimming Pool</span>
-              </div>
-            </div>
-
-            <div className="venue-box">
-              <strong>Location</strong>
-
-              <p>
-                Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East, Thane,
-                Maharashtra 400603
-              </p>
-
-              <div className="satellite-map-card">
-                <iframe
-                  title="Nitrro Gym Swimming Pool Satellite Map"
-                  src={MAP_EMBED_LINK}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                ></iframe>
-              </div>
-
-              <a href={GOOGLE_MAPS_LINK} target="_blank" rel="noreferrer">
-                <button type="button">Open Google Maps</button>
-              </a>
-            </div>
-
-            <div className="hero-actions">
-              <a href="#register">
-                <button type="button">Register Now</button>
-              </a>
-              <span>Limited curated entries only</span>
-            </div>
+    <div className="admin-page">
+      <div className="admin-card glass">
+        <div className="admin-top">
+          <div>
+            <div className="success-badge">ADMIN DASHBOARD</div>
+            <h1>Entry Verification</h1>
           </div>
 
-          <form className="form-box glass" id="register" onSubmit={handlePayment}>
-            <div className="form-badge">ENTRY REGISTRATION</div>
-
-            <h3>Register Now</h3>
-
-            <p>
-              Fill your details, accept the safety declaration, and continue to
-              secure payment.
-            </p>
-
-            {error && <div className="error">{error}</div>}
-
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Full Name *"
-            />
-
-            <input
-              name="age"
-              value={form.age}
-              onChange={handleChange}
-              placeholder="Age *"
-              type="number"
-            />
-
-            <select name="gender" value={form.gender} onChange={handleChange}>
-              <option value="">Gender *</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-              <option value="Prefer not to say">Prefer not to say</option>
-            </select>
-
-            <input
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="Contact Number *"
-              type="tel"
-            />
-
-            <input
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Email Address *"
-              type="email"
-            />
-
-            <input
-              name="instagram"
-              value={form.instagram}
-              onChange={handleChange}
-              placeholder="Instagram Handle *"
-            />
-
-            <select
-              name="packageType"
-              value={form.packageType}
-              onChange={handleChange}
-            >
-              <option value="Pool Party">Pool Party - ₹500</option>
-            </select>
-
-            <div className="icebath-option">
-              <label>
-                <input
-                  type="checkbox"
-                  name="iceBathOptIn"
-                  checked={form.iceBathOptIn}
-                  onChange={handleChange}
-                />
-                <span>
-                  Would you like to opt for the ice bath experience?
-                  <b> ₹500 add-on.</b> Registration link will be sent on
-                  WhatsApp.
-                </span>
-              </label>
-            </div>
-
-            <div className="terms-box">
-              <h4>Terms & Conditions</h4>
-
-              <ul>
-                <li>
-                  Entry is allowed only with confirmed registration. No spot
-                  entries.
-                </li>
-                <li>
-                  This is a curated event. Organizers reserve the right to
-                  approve or deny entry.
-                </li>
-                <li>Age 16+ only.</li>
-                <li>
-                  Pool access is at your own risk. Participants should be
-                  comfortable in water.
-                </li>
-                <li>
-                  No running, pushing, or unsafe behavior in or around the pool.
-                </li>
-                <li>
-                  No entry into the pool if you have skin infections, allergies,
-                  open wounds, or communicable conditions.
-                </li>
-                <li>
-                  Proper swimwear or quick-dry athleisure is mandatory for pool
-                  use.
-                </li>
-                <li>
-                  Allowed: swimwear, nylon, polyester, spandex, dry-fit,
-                  non-cotton athleisure.
-                </li>
-                <li>No food or beverages allowed in or around the pool area.</li>
-                <li>
-                  Strictly no alcohol, smoking, or illegal substances inside the
-                  premises.
-                </li>
-                <li>
-                  Any misconduct, nuisance, or harassment will result in removal
-                  without refund.
-                </li>
-                <li>
-                  Participants must follow all instructions from organizers and
-                  venue staff.
-                </li>
-                <li>
-                  Any damage to property, pool area, or pickleball equipment
-                  will be charged.
-                </li>
-                <li>
-                  Photos and videos will be captured. By attending, you consent
-                  to promotional use without compensation.
-                </li>
-                <li>
-                  Participation is entirely at your own risk. Organizers and
-                  venue are not responsible for injury, loss, theft, or health
-                  issues.
-                </li>
-                <li>
-                  Organizers may modify, pause, or cancel the event due to
-                  safety, weather, or unforeseen issues.
-                </li>
-                <li>
-                  All ticket purchases are non-refundable. No refunds for
-                  cancellation, no-show, or late arrival.
-                </li>
-              </ul>
-            </div>
-
-            <div className="checkbox-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="agreeTerms"
-                  checked={form.agreeTerms}
-                  onChange={handleChange}
-                />
-                <span>
-                  I have read and agree to all terms and conditions. I
-                  understand the risks involved and agree to follow organizer and
-                  venue rules.
-                </span>
-              </label>
-
-              <label>
-                <input
-                  type="checkbox"
-                  name="fitForPool"
-                  checked={form.fitForPool}
-                  onChange={handleChange}
-                />
-                <span>
-                  I confirm I am physically fit and have no medical conditions
-                  restricting pool activity.
-                </span>
-              </label>
-            </div>
-
-            <button type="submit">Pay ₹500</button>
-
-            <small>
-              After successful payment, your Booking ID and QR entry pass will
-              be generated and sent to your email.
-            </small>
-          </form>
+          <button className="secondary-btn" onClick={logoutAdmin}>
+            Logout
+          </button>
         </div>
-      </section>
 
-      <section className="perks">
-        <h2>
-          <span>WHAT’S</span> INCLUDED
-        </h2>
-
-        <p className="section-subtitle">
-          Everything planned to make your Sunday evening feel like a mini
-          vacation.
+        <p className="success-subtitle">
+          Scan QR or search by Booking ID, phone, name, or Instagram.
         </p>
 
-        <div className="perk-grid">
-          {perks.map((item, index) => (
-            <div className="perk-card glass" key={index}>
-              <div className="mini-water"></div>
-              <div className="icon">{item.icon}</div>
-              <h3>{item.title}</h3>
-              <p>{item.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="about">
-        <div className="about-visual">
-          <div className="big-orb"></div>
-          <img
-            src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80"
-            alt="Water party"
-          />
+        <div className="admin-actions">
+          <button onClick={() => setScannerActive(!scannerActive)}>
+            {scannerActive ? "Close Scanner" : "Open QR Scanner"}
+          </button>
         </div>
 
-        <div className="about-content glass">
-          <h2>
-            <span>ABOUT</span> THE EVENT
-          </h2>
-
-          <p>
-            Thane’s ultimate sundowner pool party brings together clean pool
-            access, EDM and house music, free mocktails, sunscreen, snacks, pool
-            games, pickleball courts and an optional ice bath experience.
-          </p>
-
-          <ul>
-            <li>
-              Venue: Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East
-            </li>
-            <li>Date: 10th May 2026</li>
-            <li>Time: 5:00 PM to 8:30 PM</li>
-            <li>Music: EDM & House</li>
-            <li>Includes: Pool access, mocktails, snacks and games</li>
-            <li>Optional add-on: Ice bath experience at ₹500</li>
-          </ul>
-
-          <div className="about-map-card">
-            <iframe
-              title="Nitrro Gym Swimming Pool Satellite Map About"
-              src={MAP_EMBED_LINK}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            ></iframe>
+        {scannerActive && (
+          <div className="scanner-box">
+            <div id="qr-reader"></div>
           </div>
+        )}
 
-          <a href={GOOGLE_MAPS_LINK} target="_blank" rel="noreferrer">
-            <button type="button">View Location</button>
-          </a>
+        <div className="admin-search">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Booking ID / phone / name / Instagram"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") searchTicket();
+            }}
+          />
+          <button onClick={() => searchTicket()}>
+            {loading ? "Searching..." : "Search"}
+          </button>
         </div>
-      </section>
 
-      <footer>
-        <p>Rukna Mana Hai Pool Party × Nitrro Thane East</p>
-      </footer>
+        {error && <div className="admin-error">{error}</div>}
+
+        {ticket && (
+          <div className="admin-result">
+            <div className="booking-pass small-pass">
+              <p>Booking ID</p>
+              <h2>{ticket.booking_id}</h2>
+
+              <span
+                className={
+                  ticket.entry_status === "used"
+                    ? "admin-status used"
+                    : "admin-status valid"
+                }
+              >
+                {ticket.entry_status === "used" ? "Already Used" : "Valid Entry"}
+              </span>
+            </div>
+
+            <div className="ticket-details ticket-details-full">
+              <h2>{ticket.name}</h2>
+
+              <div>
+                <strong>Phone</strong>
+                <span>{ticket.phone}</span>
+              </div>
+
+              <div>
+                <strong>Email</strong>
+                <span>{ticket.email}</span>
+              </div>
+
+              <div>
+                <strong>Instagram</strong>
+                <span>{ticket.instagram}</span>
+              </div>
+
+              <div>
+                <strong>Package</strong>
+                <span>{ticket.package_type}</span>
+              </div>
+
+              <div>
+                <strong>Payment</strong>
+                <span>{ticket.payment_status}</span>
+              </div>
+
+              <div>
+                <strong>Entry Status</strong>
+                <span>{ticket.entry_status}</span>
+              </div>
+            </div>
+
+            <button
+              className={ticket.entry_status === "used" ? "disabled-btn" : ""}
+              onClick={markEntryUsed}
+              disabled={ticket.entry_status === "used"}
+            >
+              {ticket.entry_status === "used"
+                ? "Entry Already Used"
+                : "Mark Entry as Used"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
