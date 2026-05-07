@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { supabase } from "./supabaseClient";
-import "./App.css";
+import "./Admin.css";
 
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "admin123";
 
@@ -31,6 +31,9 @@ export default function Admin() {
     localStorage.removeItem("poolPartyAdmin");
     setIsAdmin(false);
     setPassword("");
+    setTicket(null);
+    setSearch("");
+    setScannerActive(false);
   };
 
   const searchTicket = async (value = search) => {
@@ -42,16 +45,18 @@ export default function Admin() {
       const query = value.trim();
 
       if (!query) {
-        setError("Enter Booking ID, phone, name, or Instagram.");
+        setError("Enter Booking ID, phone, name, email, or Instagram.");
         setLoading(false);
         return;
       }
+
+      const safeQuery = query.replaceAll(",", "").replaceAll("'", "");
 
       const { data, error: searchError } = await supabase
         .from("tickets")
         .select("*")
         .or(
-          `booking_id.ilike.%${query}%,phone.ilike.%${query}%,name.ilike.%${query}%,instagram.ilike.%${query}%`
+          `booking_id.ilike.%${safeQuery}%,phone.ilike.%${safeQuery}%,name.ilike.%${safeQuery}%,instagram.ilike.%${safeQuery}%,email.ilike.%${safeQuery}%`
         )
         .limit(1)
         .maybeSingle();
@@ -99,6 +104,69 @@ export default function Admin() {
     }
   };
 
+  const markEntryValidAgain = async () => {
+    try {
+      if (!ticket) return;
+
+      const { data, error: updateError } = await supabase
+        .from("tickets")
+        .update({ entry_status: "valid" })
+        .eq("id", ticket.id)
+        .select("*")
+        .single();
+
+      if (updateError) throw updateError;
+
+      setTicket(data);
+      setError("");
+    } catch (err) {
+      console.error("ENTRY UPDATE ERROR:", err);
+      setError(err?.message || "Could not mark entry as valid.");
+    }
+  };
+
+  const markPaymentPaid = async () => {
+    try {
+      if (!ticket) return;
+
+      const { data, error: updateError } = await supabase
+        .from("tickets")
+        .update({ payment_status: "paid" })
+        .eq("id", ticket.id)
+        .select("*")
+        .single();
+
+      if (updateError) throw updateError;
+
+      setTicket(data);
+      setError("");
+    } catch (err) {
+      console.error("PAYMENT UPDATE ERROR:", err);
+      setError(err?.message || "Could not mark payment as paid.");
+    }
+  };
+
+  const markPaymentPending = async () => {
+    try {
+      if (!ticket) return;
+
+      const { data, error: updateError } = await supabase
+        .from("tickets")
+        .update({ payment_status: "pending" })
+        .eq("id", ticket.id)
+        .select("*")
+        .single();
+
+      if (updateError) throw updateError;
+
+      setTicket(data);
+      setError("");
+    } catch (err) {
+      console.error("PAYMENT UPDATE ERROR:", err);
+      setError(err?.message || "Could not mark payment as pending.");
+    }
+  };
+
   useEffect(() => {
     if (!scannerActive || !isAdmin) return;
 
@@ -141,12 +209,56 @@ export default function Admin() {
     };
   }, [scannerActive, isAdmin]);
 
+  const displayValue = (value, fallback = "N/A") => {
+    if (value === null || value === undefined || value === "") return fallback;
+    return value;
+  };
+
+  const formatAmount = (value) => {
+    if (value === null || value === undefined || value === "") return "₹0";
+    const cleanValue = String(value).replace("₹", "");
+    return `₹${cleanValue}`;
+  };
+
+  const ticketCount = Number(ticket?.ticket_count || ticket?.ticketCount || 1);
+  const ticketPrice = Number(ticket?.ticket_price || ticket?.ticketPrice || 650);
+
+  const ticketTotal = Number(
+    ticket?.ticket_total || ticket?.ticketTotal || ticketCount * ticketPrice
+  );
+
+  const iceBathSelected =
+    ticket?.ice_bath_selected === true ||
+    ticket?.iceBathSelected === true ||
+    ticket?.iceBathOptIn === true;
+
+  const iceBathPrice = Number(
+    ticket?.ice_bath_price || ticket?.iceBathPricePerPerson || 500
+  );
+
+  const iceBathTotal = Number(
+    ticket?.ice_bath_total ||
+      ticket?.iceBathTotal ||
+      (iceBathSelected ? ticketCount * iceBathPrice : 0)
+  );
+
+  const finalAmount = Number(
+    ticket?.final_amount ||
+      ticket?.amount?.toString?.().replace("₹", "") ||
+      ticketTotal + iceBathTotal
+  );
+
+  const pickleballSelected =
+    ticket?.pickleball_opt_in === true || ticket?.pickleballOptIn === true;
+
   if (!isAdmin) {
     return (
       <div className="admin-page">
         <div className="admin-card glass">
           <div className="success-badge">ADMIN LOGIN</div>
+
           <h1>Entry Dashboard</h1>
+
           <p className="success-subtitle">Enter admin password to continue.</p>
 
           <div className="admin-search">
@@ -159,6 +271,7 @@ export default function Admin() {
                 if (e.key === "Enter") loginAdmin();
               }}
             />
+
             <button onClick={loginAdmin}>Login</button>
           </div>
 
@@ -183,7 +296,7 @@ export default function Admin() {
         </div>
 
         <p className="success-subtitle">
-          Scan QR or search by Booking ID, phone, name, or Instagram.
+          Scan QR or search by Booking ID, phone, name, email, or Instagram.
         </p>
 
         <div className="admin-actions">
@@ -202,11 +315,12 @@ export default function Admin() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Booking ID / phone / name / Instagram"
+            placeholder="Booking ID / phone / name / email / Instagram"
             onKeyDown={(e) => {
               if (e.key === "Enter") searchTicket();
             }}
           />
+
           <button onClick={() => searchTicket()}>
             {loading ? "Searching..." : "Search"}
           </button>
@@ -218,7 +332,8 @@ export default function Admin() {
           <div className="admin-result">
             <div className="booking-pass small-pass">
               <p>Booking ID</p>
-              <h2>{ticket.booking_id}</h2>
+
+              <h2>{displayValue(ticket.booking_id, "No Booking ID")}</h2>
 
               <span
                 className={
@@ -232,48 +347,136 @@ export default function Admin() {
             </div>
 
             <div className="ticket-details ticket-details-full">
-              <h2>{ticket.name}</h2>
+              <h2>{displayValue(ticket.name, "Guest Name")}</h2>
 
               <div>
                 <strong>Phone</strong>
-                <span>{ticket.phone}</span>
+                <span>{displayValue(ticket.phone)}</span>
               </div>
 
               <div>
                 <strong>Email</strong>
-                <span>{ticket.email}</span>
+                <span>{displayValue(ticket.email)}</span>
               </div>
 
               <div>
                 <strong>Instagram</strong>
-                <span>{ticket.instagram}</span>
+                <span>{displayValue(ticket.instagram, "Optional / Not Added")}</span>
+              </div>
+
+              <div>
+                <strong>Age</strong>
+                <span>{displayValue(ticket.age)}</span>
+              </div>
+
+              <div>
+                <strong>Gender</strong>
+                <span>{displayValue(ticket.gender)}</span>
               </div>
 
               <div>
                 <strong>Package</strong>
-                <span>{ticket.package_type}</span>
+                <span>
+                  {displayValue(ticket.package_type || ticket.packageType, "Pool Party")}
+                </span>
+              </div>
+
+              <div>
+                <strong>People Count</strong>
+                <span>{ticketCount}</span>
+              </div>
+
+              <div>
+                <strong>Ticket Price</strong>
+                <span>₹{ticketPrice} per person</span>
+              </div>
+
+              <div>
+                <strong>Ticket Total</strong>
+                <span>
+                  ₹{ticketPrice} × {ticketCount} = ₹{ticketTotal}
+                </span>
+              </div>
+
+              <div>
+                <strong>Ice Bath</strong>
+                <span>{iceBathSelected ? "Yes" : "No"}</span>
+              </div>
+
+              {iceBathSelected && (
+                <div>
+                  <strong>Ice Bath Total</strong>
+                  <span>
+                    ₹{iceBathPrice} × {ticketCount} = ₹{iceBathTotal}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <strong>Pickleball</strong>
+                <span>{pickleballSelected ? "Yes" : "No"}</span>
+              </div>
+
+              <div className="final-amount-row">
+                <strong>Final Amount</strong>
+                <span>{formatAmount(finalAmount)}</span>
               </div>
 
               <div>
                 <strong>Payment</strong>
-                <span>{ticket.payment_status}</span>
+                <span
+                  className={
+                    ticket.payment_status === "paid"
+                      ? "payment-pill paid"
+                      : "payment-pill pending"
+                  }
+                >
+                  {displayValue(ticket.payment_status, "pending")}
+                </span>
               </div>
 
               <div>
                 <strong>Entry Status</strong>
-                <span>{ticket.entry_status}</span>
+                <span>{displayValue(ticket.entry_status, "valid")}</span>
+              </div>
+
+              <div>
+                <strong>Created At</strong>
+                <span>
+                  {ticket.created_at
+                    ? new Date(ticket.created_at).toLocaleString("en-IN")
+                    : displayValue(ticket.createdAt)}
+                </span>
               </div>
             </div>
 
-            <button
-              className={ticket.entry_status === "used" ? "disabled-btn" : ""}
-              onClick={markEntryUsed}
-              disabled={ticket.entry_status === "used"}
-            >
-              {ticket.entry_status === "used"
-                ? "Entry Already Used"
-                : "Mark Entry as Used"}
-            </button>
+            <div className="admin-actions admin-actions-bottom">
+              <button
+                className={ticket.entry_status === "used" ? "disabled-btn" : ""}
+                onClick={markEntryUsed}
+                disabled={ticket.entry_status === "used"}
+              >
+                {ticket.entry_status === "used"
+                  ? "Entry Already Used"
+                  : "Mark Entry as Used"}
+              </button>
+
+              {ticket.entry_status === "used" && (
+                <button className="secondary-btn" onClick={markEntryValidAgain}>
+                  Mark Entry Valid Again
+                </button>
+              )}
+
+              {ticket.payment_status === "paid" ? (
+                <button className="secondary-btn" onClick={markPaymentPending}>
+                  Mark Payment Pending
+                </button>
+              ) : (
+                <button className="secondary-btn" onClick={markPaymentPaid}>
+                  Mark Payment Paid
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

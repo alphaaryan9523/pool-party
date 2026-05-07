@@ -1,7 +1,23 @@
 import React, { useState } from "react";
 import "./App.css";
 
-const POOL_PARTY_LINK = "https://rzp.io/rzp/ojAr6Qh";
+/*
+  Replace these placeholder links with your actual Razorpay payment links.
+  You need 10 links only because max count is 5.
+*/
+const PAYMENT_LINKS = {
+  650: "https://rzp.io/rzp/C8kxES5",
+  1300: "https://rzp.io/rzp/mB55y4D",
+  1950: "https://rzp.io/rzp/koHUUxso",
+  2600: "https://rzp.io/rzp/xLIadOhc",
+  3250: "https://rzp.io/rzp/tc08cOd",
+
+  1150: "https://rzp.io/rzp/zdTprxW",
+  2300: "https://rzp.io/rzp/plbV6lX",
+  3450: "https://rzp.io/rzp/nQCZVSG",
+  4600: "https://rzp.io/rzp/1WW6skoe",
+  5750: "https://rzp.io/rzp/sTvuVsTY",
+};
 
 const GOOGLE_MAPS_LINK =
   "https://www.google.com/maps/search/?api=1&query=Nitrro%20Gym%20Swimming%20Pool%2C%20Kanhaiyya%20Nagar%2C%20Thane%20East%2C%20Thane%2C%20Maharashtra%20400603";
@@ -9,21 +25,25 @@ const GOOGLE_MAPS_LINK =
 const MAP_EMBED_LINK =
   "https://maps.google.com/maps?q=Nitrro%20Gym%20Swimming%20Pool%2C%20Kanhaiyya%20Nagar%2C%20Thane%20East%2C%20Thane%2C%20Maharashtra%20400603&t=k&z=17&ie=UTF8&iwloc=&output=embed";
 
+const TICKET_PRICE = 650;
+const ICE_BATH_PRICE = 500;
+const MAX_PEOPLE = 5;
+
 const perks = [
-  {
-    icon: "🎧",
-    title: "DJ Booth",
-    text: "EDM & house music with sundowner poolside energy.",
-  },
   {
     icon: "🏊",
     title: "Pool Access",
-    text: "Swimming pool access for the ultimate summer vibe.",
+    text: "Premium pool access for the perfect sundowner vibe.",
+  },
+  {
+    icon: "🎵",
+    title: "House Music",
+    text: "Clean house music with poolside sundowner energy.",
   },
   {
     icon: "🍹",
     title: "Free Mocktails",
-    text: "Refreshing mocktails included for all registered guests.",
+    text: "Refreshing mocktails included for registered guests.",
   },
   {
     icon: "☀️",
@@ -33,14 +53,25 @@ const perks = [
   {
     icon: "🏓",
     title: "Pickleball",
-    text: "Two pickleball courts for fun games and challenges.",
+    text: "Pickleball access for fun games and challenges.",
   },
   {
     icon: "🧊",
-    title: "Ice Bath Add-on",
-    text: "Optional ₹500 ice bath experience. Registration link will be sent on WhatsApp.",
+    title: "Ice Bath Option",
+    text: "Optional ice bath experience available during registration.",
   },
 ];
+
+const ticketOptions = Array.from({ length: MAX_PEOPLE }, (_, index) => {
+  const count = index + 1;
+
+  return {
+    count,
+    label: `${count} ${count === 1 ? "Person" : "People"} - ₹${
+      count * TICKET_PRICE
+    }`,
+  };
+});
 
 export default function App() {
   const [form, setForm] = useState({
@@ -50,13 +81,19 @@ export default function App() {
     phone: "",
     email: "",
     instagram: "",
-    packageType: "Pool Party",
+    ticketCount: 1,
     iceBathOptIn: false,
+    pickleballOptIn: false,
     agreeTerms: false,
     fitForPool: false,
   });
 
   const [error, setError] = useState("");
+
+  const ticketCount = Number(form.ticketCount || 1);
+  const ticketTotal = ticketCount * TICKET_PRICE;
+  const iceBathTotal = form.iceBathOptIn ? ticketCount * ICE_BATH_PRICE : 0;
+  const totalAmount = ticketTotal + iceBathTotal;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -70,14 +107,7 @@ export default function App() {
   };
 
   const validateForm = () => {
-    if (
-      !form.name ||
-      !form.age ||
-      !form.gender ||
-      !form.phone ||
-      !form.email ||
-      !form.instagram
-    ) {
+    if (!form.name || !form.age || !form.gender || !form.phone || !form.email) {
       setError("Please fill all required fields.");
       return false;
     }
@@ -97,6 +127,11 @@ export default function App() {
       return false;
     }
 
+    if (ticketCount < 1 || ticketCount > MAX_PEOPLE) {
+      setError(`You can book minimum 1 and maximum ${MAX_PEOPLE} people at a time.`);
+      return false;
+    }
+
     if (!form.agreeTerms || !form.fitForPool) {
       setError("Please accept the mandatory declarations.");
       return false;
@@ -108,7 +143,13 @@ export default function App() {
   const saveUserDetails = () => {
     const ticketUser = {
       ...form,
-      amount: "₹500",
+      ticketCount,
+      ticketPrice: TICKET_PRICE,
+      ticketTotal: `₹${ticketTotal}`,
+      iceBathSelected: form.iceBathOptIn,
+      iceBathPricePerPerson: form.iceBathOptIn ? `₹${ICE_BATH_PRICE}` : "₹0",
+      iceBathTotal: `₹${iceBathTotal}`,
+      amount: `₹${totalAmount}`,
       event: "Rukna Mana Hai Pool Party",
       date: "10 May 2026",
       time: "5:00 PM - 8:30 PM",
@@ -120,7 +161,6 @@ export default function App() {
     };
 
     localStorage.setItem("poolPartyUser", JSON.stringify(ticketUser));
-
     localStorage.removeItem("poolPartyTicketId");
     localStorage.removeItem("poolPartyBookingId");
   };
@@ -132,12 +172,14 @@ export default function App() {
 
     saveUserDetails();
 
-    if (POOL_PARTY_LINK.includes("PASTE_") || POOL_PARTY_LINK.trim() === "") {
-      setError("Payment link is not added yet. Please add Razorpay link.");
+    const selectedPaymentLink = PAYMENT_LINKS[totalAmount];
+
+    if (!selectedPaymentLink || selectedPaymentLink.includes("YOUR_")) {
+      setError(`Payment link for ₹${totalAmount} is not added yet.`);
       return;
     }
 
-    window.location.href = POOL_PARTY_LINK;
+    window.location.href = selectedPaymentLink;
   };
 
   return (
@@ -156,8 +198,8 @@ export default function App() {
           <p>THANE’S ULTIMATE SUNDOWNER POOL PARTY</p>
         </nav>
 
-        <div className="hero-inner">
-          <div className="hero-content glass">
+        <div className="hero-main-card glass">
+          <div className="hero-top-content">
             <p className="tag">10 MAY • 5:00 PM - 8:30 PM • THANE EAST</p>
 
             <h1>
@@ -169,315 +211,249 @@ export default function App() {
             </h1>
 
             <p className="subtitle">
-              Dive into a premium sundowner with EDM and house music, pool
-              games, free mocktails, sunscreen, snacks, pickleball courts and
-              complete summer energy.
+               pool access, house music, mocktails, pickleball, ice bath
+              option and complete summer energy at Nitrro Gym Swimming Pool.
             </p>
 
-            <div className="hero-info">
-              <div>
-                <strong>Pool Party</strong>
-                <span>₹500</span>
-              </div>
-
-              <div>
-                <strong>Time</strong>
-                <span>5 PM - 8:30 PM</span>
-              </div>
-
-              <div>
-                <strong>Venue</strong>
-                <span>Nitrro Gym Swimming Pool</span>
-              </div>
-            </div>
-
-            <div className="venue-box">
-              <strong>Location</strong>
-
-              <p>
-                Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East, Thane,
-                Maharashtra 400603
-              </p>
-
-              <div className="satellite-map-card">
-                <iframe
-                  title="Nitrro Gym Swimming Pool Satellite Map"
-                  src={MAP_EMBED_LINK}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen
-                ></iframe>
-              </div>
-
-              <a href={GOOGLE_MAPS_LINK} target="_blank" rel="noreferrer">
-                <button type="button">Open Google Maps</button>
-              </a>
-            </div>
+            
 
             <div className="hero-actions">
               <a href="#register">
                 <button type="button">Register Now</button>
               </a>
-              <span>Limited curated entries only</span>
+
+              
             </div>
           </div>
 
-          <form className="form-box glass" id="register" onSubmit={handlePayment}>
-            <div className="form-badge">ENTRY REGISTRATION</div>
-
-            <h3>Register Now</h3>
-
-            <p>
-              Fill your details, accept the safety declaration, and continue to
-              secure payment.
-            </p>
-
-            {error && <div className="error">{error}</div>}
-
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Full Name *"
-            />
-
-            <input
-              name="age"
-              value={form.age}
-              onChange={handleChange}
-              placeholder="Age *"
-              type="number"
-            />
-
-            <select name="gender" value={form.gender} onChange={handleChange}>
-              <option value="">Gender *</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-              <option value="Prefer not to say">Prefer not to say</option>
-            </select>
-
-            <input
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="Contact Number *"
-              type="tel"
-            />
-
-            <input
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Email Address *"
-              type="email"
-            />
-
-            <input
-              name="instagram"
-              value={form.instagram}
-              onChange={handleChange}
-              placeholder="Instagram Handle *"
-            />
-
-            <select
-              name="packageType"
-              value={form.packageType}
-              onChange={handleChange}
-            >
-              <option value="Pool Party">Pool Party - ₹500</option>
-            </select>
-
-            <div className="icebath-option">
-              <label>
-                <input
-                  type="checkbox"
-                  name="iceBathOptIn"
-                  checked={form.iceBathOptIn}
-                  onChange={handleChange}
-                />
-                <span>
-                  Would you like to opt for the ice bath experience?
-                  <b> ₹500 add-on.</b> Registration link will be sent on
-                  WhatsApp.
-                </span>
-              </label>
+          <div className="hero-includes">
+            <div className="includes-heading">
+              <p>WHAT’S INCLUDED</p>
+              <h2>Everything for a perfect sundowner</h2>
             </div>
 
-            <div className="terms-box">
-              <h4>Terms & Conditions</h4>
+            <div className="hero-includes-grid">
+              {perks.map((item, index) => (
+                <div className="hero-include-card" key={index}>
+                  <div className="include-icon">{item.icon}</div>
 
-              <ul>
-                <li>
-                  Entry is allowed only with confirmed registration. No spot
-                  entries.
-                </li>
-                <li>
-                  This is a curated event. Organizers reserve the right to
-                  approve or deny entry.
-                </li>
-                <li>Age 16+ only.</li>
-                <li>
-                  Pool access is at your own risk. Participants should be
-                  comfortable in water.
-                </li>
-                <li>
-                  No running, pushing, or unsafe behavior in or around the pool.
-                </li>
-                <li>
-                  No entry into the pool if you have skin infections, allergies,
-                  open wounds, or communicable conditions.
-                </li>
-                <li>
-                  Proper swimwear or quick-dry athleisure is mandatory for pool
-                  use.
-                </li>
-                <li>
-                  Allowed: swimwear, nylon, polyester, spandex, dry-fit,
-                  non-cotton athleisure.
-                </li>
-                <li>No food or beverages allowed in or around the pool area.</li>
-                <li>
-                  Strictly no alcohol, smoking, or illegal substances inside the
-                  premises.
-                </li>
-                <li>
-                  Any misconduct, nuisance, or harassment will result in removal
-                  without refund.
-                </li>
-                <li>
-                  Participants must follow all instructions from organizers and
-                  venue staff.
-                </li>
-                <li>
-                  Any damage to property, pool area, or pickleball equipment
-                  will be charged.
-                </li>
-                <li>
-                  Photos and videos will be captured. By attending, you consent
-                  to promotional use without compensation.
-                </li>
-                <li>
-                  Participation is entirely at your own risk. Organizers and
-                  venue are not responsible for injury, loss, theft, or health
-                  issues.
-                </li>
-                <li>
-                  Organizers may modify, pause, or cancel the event due to
-                  safety, weather, or unforeseen issues.
-                </li>
-                <li>
-                  All ticket purchases are non-refundable. No refunds for
-                  cancellation, no-show, or late arrival.
-                </li>
-              </ul>
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.text}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <div className="checkbox-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="agreeTerms"
-                  checked={form.agreeTerms}
-                  onChange={handleChange}
-                />
-                <span>
-                  I have read and agree to all terms and conditions. I
-                  understand the risks involved and agree to follow organizer and
-                  venue rules.
-                </span>
-              </label>
-
-              <label>
-                <input
-                  type="checkbox"
-                  name="fitForPool"
-                  checked={form.fitForPool}
-                  onChange={handleChange}
-                />
-                <span>
-                  I confirm I am physically fit and have no medical conditions
-                  restricting pool activity.
-                </span>
-              </label>
-            </div>
-
-            <button type="submit">Pay ₹500</button>
-
-            <small>
-              After successful payment, your Booking ID and QR entry pass will
-              be generated and sent to your email.
-            </small>
-          </form>
+          </div>
         </div>
       </section>
 
-      <section className="perks">
-        <h2>
-          <span>WHAT’S</span> INCLUDED
-        </h2>
+      <section className="registration-section" id="register">
+        <form className="form-box glass" onSubmit={handlePayment}>
+          <div className="form-badge">ENTRY REGISTRATION</div>
 
-        <p className="section-subtitle">
-          Everything planned to make your Sunday evening feel like a mini
-          vacation.
-        </p>
-
-        <div className="perk-grid">
-          {perks.map((item, index) => (
-            <div className="perk-card glass" key={index}>
-              <div className="mini-water"></div>
-              <div className="icon">{item.icon}</div>
-              <h3>{item.title}</h3>
-              <p>{item.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="about">
-        <div className="about-visual">
-          <div className="big-orb"></div>
-          <img
-            src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80"
-            alt="Water party"
-          />
-        </div>
-
-        <div className="about-content glass">
-          <h2>
-            <span>ABOUT</span> THE EVENT
-          </h2>
+          <h3>Register Now</h3>
 
           <p>
-            Thane’s ultimate sundowner pool party brings together clean pool
-            access, EDM and house music, free mocktails, sunscreen, snacks, pool
-            games, pickleball courts and an optional ice bath experience.
+            Fill your details, select number of people, choose add-ons, accept
+            the safety declaration, and continue to payment.
           </p>
 
-          <ul>
-            <li>
-              Venue: Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East
-            </li>
-            <li>Date: 10th May 2026</li>
-            <li>Time: 5:00 PM to 8:30 PM</li>
-            <li>Music: EDM & House</li>
-            <li>Includes: Pool access, mocktails, snacks and games</li>
-            <li>Optional add-on: Ice bath experience at ₹500</li>
-          </ul>
+          {error && <div className="error">{error}</div>}
+
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Full Name *"
+          />
+
+          <input
+            name="age"
+            value={form.age}
+            onChange={handleChange}
+            placeholder="Age *"
+            type="number"
+          />
+
+          <select name="gender" value={form.gender} onChange={handleChange}>
+            <option value="">Gender *</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+
+          <input
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+            placeholder="Contact Number *"
+            type="tel"
+          />
+
+          <input
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="Email Address *"
+            type="email"
+          />
+
+          <input
+            name="instagram"
+            value={form.instagram}
+            onChange={handleChange}
+            placeholder="Instagram Handle Optional"
+          />
+
+          <div className="ticket-count-box">
+            <label>Number of People</label>
+
+            <select
+              name="ticketCount"
+              value={form.ticketCount}
+              onChange={handleChange}
+            >
+              {ticketOptions.map((option) => (
+                <option key={option.count} value={option.count}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <small>Maximum 5 people can be booked at a time.</small>
+          </div>
+
+          <div className="amount-box">
+            <span>Pool Party Ticket</span>
+            <strong>
+              ₹{TICKET_PRICE} × {ticketCount} = ₹{ticketTotal}
+            </strong>
+          </div>
+
+          <div className="option-card">
+            <label>
+              <input
+                type="checkbox"
+                name="iceBathOptIn"
+                checked={form.iceBathOptIn}
+                onChange={handleChange}
+              />
+
+              <span>Add ice bath experience ₹{ICE_BATH_PRICE} per person</span>
+            </label>
+          </div>
+
+          {form.iceBathOptIn && (
+            <div className="amount-box">
+              <span>Ice Bath Add-on</span>
+              <strong>
+                ₹{ICE_BATH_PRICE} × {ticketCount} = ₹{iceBathTotal}
+              </strong>
+            </div>
+          )}
+
+          <div className="amount-box total">
+            <span>Total Amount</span>
+            <strong>₹{totalAmount}</strong>
+          </div>
+
+          <div className="option-card">
+            <label>
+              <input
+                type="checkbox"
+                name="pickleballOptIn"
+                checked={form.pickleballOptIn}
+                onChange={handleChange}
+              />
+
+              <span>I am interested in playing pickleball.</span>
+            </label>
+          </div>
+
+          <div className="terms-box">
+            <h4>Terms & Conditions</h4>
+
+            <ul>
+              <li>Entry is allowed only with confirmed registration.</li>
+              <li>No spot entries.</li>
+              <li>Age 16+ only.</li>
+              <li>Pool access is at your own risk.</li>
+              <li>No running, pushing, or unsafe behavior near the pool.</li>
+              <li>Proper swimwear or quick-dry athleisure is mandatory.</li>
+              <li>No alcohol, smoking, or illegal substances allowed.</li>
+              <li>Misconduct may result in removal without refund.</li>
+              <li>Photos and videos may be used for promotional content.</li>
+              <li>All ticket purchases are non-refundable.</li>
+            </ul>
+          </div>
+
+          <div className="checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                name="agreeTerms"
+                checked={form.agreeTerms}
+                onChange={handleChange}
+              />
+
+              <span>I have read and agree to all terms and conditions.</span>
+            </label>
+
+            <label>
+              <input
+                type="checkbox"
+                name="fitForPool"
+                checked={form.fitForPool}
+                onChange={handleChange}
+              />
+
+              <span>I confirm I am physically fit for pool activity.</span>
+            </label>
+          </div>
+
+          <button type="submit">Pay ₹{totalAmount}</button>
+
+          <small>
+            After successful payment, your Booking ID entry pass will be
+            generated.
+          </small>
+        </form>
+      </section>
+
+      <section className="venue-final-section">
+        <div className="venue-final-card glass">
+          <div className="venue-content">
+            <p className="tag">LOCATION DETAILS</p>
+
+            <h2>
+              <span>TIME &</span> VENUE
+            </h2>
+
+            <ul>
+              <li>Date: 10th May 2026</li>
+              <li>Time: 5:00 PM to 8:30 PM</li>
+              <li>
+                Venue: Nitrro Gym Swimming Pool, Kanhaiyya Nagar, Thane East,
+                Thane, Maharashtra 400603
+              </li>
+            </ul>
+
+            <a href={GOOGLE_MAPS_LINK} target="_blank" rel="noreferrer">
+              <button type="button">Open Google Maps</button>
+            </a>
+          </div>
 
           <div className="about-map-card">
             <iframe
-              title="Nitrro Gym Swimming Pool Satellite Map About"
+              title="Nitrro Gym Swimming Pool Satellite Map"
               src={MAP_EMBED_LINK}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
             ></iframe>
           </div>
-
-          <a href={GOOGLE_MAPS_LINK} target="_blank" rel="noreferrer">
-            <button type="button">View Location</button>
-          </a>
         </div>
       </section>
 

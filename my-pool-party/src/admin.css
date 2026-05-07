@@ -1,0 +1,346 @@
+* {
+    box-sizing: border-box;
+  }
+  
+  .admin-page {
+    min-height: 100vh;
+    width: 100%;
+    padding: 28px;
+    color: white;
+    background:
+      radial-gradient(circle at 10% 10%, rgba(0, 255, 255, 0.16), transparent 30%),
+      radial-gradient(circle at 90% 5%, rgba(0, 102, 255, 0.18), transparent 32%),
+      linear-gradient(135deg, #020711 0%, #041827 45%, #050914 100%);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+  }
+  
+  .glass {
+    background: rgba(255, 255, 255, 0.075);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+  }
+  
+  .admin-card {
+    width: min(980px, 100%);
+    margin: 0 auto;
+    padding: 34px;
+    border-radius: 34px;
+  }
+  
+  .success-badge {
+    width: fit-content;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(141, 247, 255, 0.14);
+    color: #8df7ff;
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 900;
+    margin-bottom: 14px;
+  }
+  
+  .admin-card h1 {
+    font-size: clamp(36px, 6vw, 68px);
+    line-height: 0.95;
+    letter-spacing: -2px;
+    margin-bottom: 12px;
+  }
+  
+  .success-subtitle {
+    color: rgba(255, 255, 255, 0.68);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  
+  .admin-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  
+  .admin-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  
+  .admin-actions button,
+  .admin-search button,
+  .secondary-btn,
+  .admin-result button {
+    border: 0;
+    outline: 0;
+    padding: 14px 22px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #8df7ff, #2abfff);
+    color: #00111a;
+    font-weight: 900;
+    cursor: pointer;
+    transition: 0.25s ease;
+  }
+  
+  .admin-actions button:hover,
+  .admin-search button:hover,
+  .secondary-btn:hover,
+  .admin-result button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 45px rgba(0, 217, 255, 0.28);
+  }
+  
+  .secondary-btn {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  }
+  
+  .disabled-btn {
+    opacity: 0.55;
+    cursor: not-allowed !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+  
+  .admin-search {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    margin: 18px 0;
+  }
+  
+  .admin-search input {
+    width: 100%;
+    padding: 16px 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    font-size: 15px;
+  }
+  
+  .admin-search input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .admin-error {
+    margin-top: 16px;
+    padding: 15px 18px;
+    border-radius: 18px;
+    background: rgba(255, 82, 82, 0.13);
+    border: 1px solid rgba(255, 82, 82, 0.35);
+    color: #ffb3b3;
+    font-weight: 700;
+  }
+  
+  .scanner-box {
+    margin: 20px 0;
+    padding: 18px;
+    border-radius: 24px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  
+  #qr-reader {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 18px;
+  }
+  
+  #qr-reader video {
+    border-radius: 18px;
+  }
+  
+  .admin-result {
+    margin-top: 26px;
+  }
+  
+  .booking-pass {
+    padding: 26px;
+    border-radius: 28px;
+    background:
+      radial-gradient(circle at top right, rgba(141, 247, 255, 0.24), transparent 34%),
+      rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(141, 247, 255, 0.2);
+    margin-bottom: 22px;
+  }
+  
+  .booking-pass p {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  
+  .booking-pass h2 {
+    font-size: clamp(28px, 5vw, 48px);
+    word-break: break-word;
+    margin-bottom: 16px;
+  }
+  
+  .admin-status {
+    display: inline-flex;
+    padding: 9px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 900;
+  }
+  
+  .admin-status.valid {
+    background: rgba(50, 255, 160, 0.14);
+    color: #8cffc5;
+    border: 1px solid rgba(50, 255, 160, 0.28);
+  }
+  
+  .admin-status.used {
+    background: rgba(255, 193, 7, 0.14);
+    color: #ffd76d;
+    border: 1px solid rgba(255, 193, 7, 0.28);
+  }
+  
+  .ticket-details {
+    padding: 24px;
+    border-radius: 28px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  
+  .ticket-details h2 {
+    font-size: 30px;
+    margin-bottom: 18px;
+  }
+  
+  .ticket-details-full div {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+  }
+  
+  .ticket-details-full div:last-child {
+    border-bottom: none;
+  }
+  
+  .ticket-details-full div strong {
+    min-width: 150px;
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 14px;
+  }
+  
+  .ticket-details-full div span {
+    color: white;
+    text-align: right;
+    word-break: break-word;
+    font-weight: 700;
+  }
+  
+  .final-amount-row {
+    margin: 10px 0;
+    padding: 18px !important;
+    border-radius: 20px;
+    background: linear-gradient(
+      135deg,
+      rgba(0, 255, 255, 0.18),
+      rgba(255, 255, 255, 0.08)
+    );
+    border: 1px solid rgba(141, 247, 255, 0.25) !important;
+  }
+  
+  .final-amount-row strong,
+  .final-amount-row span {
+    font-size: 20px !important;
+    color: white !important;
+  }
+  
+  .payment-pill {
+    display: inline-flex;
+    width: fit-content;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+  }
+  
+  .payment-pill.paid {
+    background: rgba(50, 255, 160, 0.14);
+    color: #8cffc5 !important;
+    border: 1px solid rgba(50, 255, 160, 0.28);
+  }
+  
+  .payment-pill.pending {
+    background: rgba(255, 193, 7, 0.14);
+    color: #ffd76d !important;
+    border: 1px solid rgba(255, 193, 7, 0.28);
+  }
+  
+  .admin-actions-bottom {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .admin-actions-bottom button {
+    flex: 1;
+    min-width: 190px;
+  }
+  
+  @media (max-width: 700px) {
+    .admin-page {
+      padding: 16px;
+    }
+  
+    .admin-card {
+      padding: 22px;
+      border-radius: 26px;
+    }
+  
+    .admin-top {
+      flex-direction: column;
+    }
+  
+    .secondary-btn {
+      width: 100%;
+    }
+  
+    .admin-search {
+      grid-template-columns: 1fr;
+    }
+  
+    .admin-search button {
+      width: 100%;
+    }
+  
+    .admin-actions button {
+      width: 100%;
+    }
+  
+    .ticket-details {
+      padding: 18px;
+    }
+  
+    .ticket-details-full div {
+      flex-direction: column;
+      gap: 6px;
+    }
+  
+    .ticket-details-full div span {
+      text-align: left;
+    }
+  
+    .ticket-details-full div strong {
+      min-width: auto;
+    }
+  
+    .admin-actions-bottom button {
+      width: 100%;
+    }
+  }
